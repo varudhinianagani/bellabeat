@@ -1,0 +1,338 @@
+---
+title: "Bellabeat Case Study"
+author: "Varudhini"
+output: html_document
+---
+
+## Summary 
+
+Bellabeat, a high-tech manufacturer of health-focused products for women. The Bellabeat app provides users with health data related to their activity, sleep, stress, menstrual cycle, and mindfulness habits. This data can help users better understand their current habits and make healthy decisions. 
+
+The Bellabeat app connects to their line of smart wellness products. Leaf is a Bellabeat’s classic wellness tracker can be worn as a bracelet, necklace, or clip. The Leaf tracker connects to the Bellabeat app to track activity, sleep, and stress.Time is a wellness watch combines the timeless look of a classic timepiece with smart technology to track user activity, sleep, and stress. The Time watch connects to the Bellabeat app to provide you with insights into your daily wellness. Spring is a water bottle that tracks daily water intake using smart technology to ensure that you are appropriately hydrated throughout the day. The Spring bottle connects to the Bellabeat app to track your hydration levels. 
+
+Bellabeat also offers a subscription-based membership program for users. Membership gives users 24/7 access to fully personalized guidance on nutrition, activity, sleep, health and beauty, and mindfulness based on their lifestyle and goals.
+
+## Ask
+
+Analyze the general usage of smart devices, identify the trends and propose recommendations to improve the marketing strategy of Bellabeat.
+
+**Stakeholders**
+
+* Urška Sršen: Bellabeat’s cofounder and Chief Creative Officer
+* Sando Mur: Mathematician and Bellabeat’s cofounder; key member of the Bellabeat executive team
+* Bellabeat marketing analytics team
+
+## Prepare
+
+We are using Fitbit dataset from Kaggle available through Mobius. This Kaggle data set contains personal fitness tracker data from thirty fitbit users. Thirty eligible Fitbit users consented to the submission of personal tracker data. It includes information about daily activity, steps, and heart rate that can be used to explore users' habits.
+
+The data is stored in csv files. The data is organized in both wide and long formats. The dataset has sampling bias as the data has only fitbit users. This dataset may not be appropriate to apply the trends to women focused products as the dataset may contain even mens data. The dataset is anonymized and is accessible publicly. The dataset has required information for identifying the usage trends for the smart devices.
+    
+*Credits*: The dataset is from [Kaggle](https://www.kaggle.com/datasets/arashnic/fitbit), made available through Mobius.     
+
+## Process
+
+Installed and loaded required packages and discarded weight_log_info data as it has repeated datetimes and fat column is mostly null for many entries. Cleaned requried dataframes to have unique and consitent column names, transformed the dates into standard date format and removed duplicates.
+
+Install and load required R packages for data manipulation, exploration and visualization.
+
+```{r}
+# Download url for R packages
+
+options(repos = list(CRAN="https://cran.rstudio.com/"))
+```
+
+
+```{r}
+# Tidyverse for data manipulation, exploration and visualization
+
+install.packages("tidyverse")
+library(tidyverse)
+```
+
+
+```{r}
+# For easily building file paths
+
+install.packages("here")
+library(here)
+```
+
+
+```{r}
+# cleaning data
+
+install.packages("janitor")
+library(janitor)
+```
+
+
+```{r}
+# summarizing data
+
+install.packages("skimr")
+library(skimr)
+```
+
+
+```{r}
+# lubridate package for converting datetime
+
+install.packages("lubridate")         
+library("lubridate")
+```
+
+
+```{r}
+# ggplot2 for visualizations
+
+install.packages("ggplot2")
+library(ggplot2)
+```
+
+
+```{r}
+# listing csv file from a folder with path
+
+filenames <- list.files(path = "Fitbit_dataset", full.names = TRUE, pattern="\\.csv$")
+```
+
+
+```{r}
+# reading csv file into  data frames using `filenames` list
+
+daily_activity <- read_csv(filenames[[1]])
+daily_calories <- read_csv(filenames[[2]])
+daily_intensities <- read_csv(filenames[[3]])
+daily_steps <- read_csv(filenames[[4]])
+heartrate_seconds <- read_csv(filenames[[5]])
+hourly_calories <- read_csv(filenames[[6]])
+hourly_intensities <- read_csv(filenames[[7]])
+hourlySteps_merged <- read_csv(filenames[[8]])
+minute_calories <- read_csv(filenames[[9]])
+minute_intensities <- read_csv(filenames[[11]])
+minute_METs <- read_csv(filenames[[13]])
+minute_sleep <- read_csv(filenames[[14]])
+minute_steps <- read_csv(filenames[[15]])
+sleep_activity <- read_csv(filenames[[17]])
+weight_log_info <- read_csv(filenames[[18]])
+```
+
+
+```{r}
+# cleaning columns to be unique and consistent
+
+daily_activity <- clean_names(daily_activity)
+daily_calories <- clean_names(daily_calories)
+daily_intensities <- clean_names(daily_intensities)
+daily_steps <- clean_names(daily_steps)
+sleep_activity <- clean_names(sleep_activity)
+```
+
+
+```{r}
+# Identifying and remove duplicates
+
+sum(duplicated(daily_activity))
+sum(duplicated(daily_calories))
+sum(duplicated(daily_intensities))
+sum(duplicated(daily_steps))
+sum(duplicated(sleep_activity))
+
+daily_activity <- unique(daily_activity)
+daily_calories <- unique(daily_calories)
+daily_intensities <- unique(daily_intensities)
+daily_steps <- unique(daily_steps)
+sleep_activity <- unique(sleep_activity)
+
+```
+
+
+```{r}
+# renaming the column name
+
+daily_activity <- rename(daily_activity, activity_day = activity_date)
+```
+
+
+```{r}
+# Changing char to datetime , datetime to date
+
+
+daily_activity$activity_day <- as_date(parse_date_time(daily_activity$activity_day, "%m/%d/%y" ))
+daily_calories$activity_day <- as_date(parse_date_time(daily_calories$activity_day, "%m/%d/%y" ))
+daily_intensities$activity_day <- as_date(parse_date_time(daily_intensities$activity_day, "%m/%d/%y" ))
+daily_steps$activity_day <- as_date(parse_date_time(daily_steps$activity_day, "%m/%d/%y" ))
+sleep_activity$sleep_day <- as_date(parse_date_time(sleep_activity$sleep_day, "%m/%d/%y %I:%M:%S %p"))
+```
+
+
+## Analysis and Share
+
+
+```{r}
+
+# summarizing and previewing data
+
+summary(daily_activity)
+summary(sleep_activity)
+
+head(daily_activity)
+head(sleep_activity)
+```
+
+------
+
+### Average Activity hours vs Sleep hours
+
+```{r}
+# mean plot - activity_hours vs sleep_hours (average activity and sleep hours per user per day)
+
+activity <- daily_activity %>% 
+  mutate(sum_active_minutes = (very_active_minutes + fairly_active_minutes + lightly_active_minutes)) %>% 
+  group_by(activity_day) %>% 
+  summarize(mean_activity_hours = mean(sum_active_minutes/60))
+           
+
+sleep <- sleep_activity %>% 
+  group_by(sleep_day) %>% 
+  summarize(mean_sleep_hours = mean(total_minutes_asleep/60))
+
+activity_sleep <- merge(activity, sleep, by.x = "activity_day", by.y= "sleep_day") %>% 
+  pivot_longer(!activity_day, names_to = "activity_type", values_to = "mean_hours")
+
+activity_sleep %>% 
+  ggplot() + geom_line(mapping = aes(x = activity_day, y = mean_hours, color = activity_type)) + 
+  labs(title = "Average activity and sleep hours per person per day") +
+  scale_y_continuous(breaks = seq(0, 24, by=1))
+
+```
+
+
+> Most of the users are getting 6-8 hours of sleep and are consistently active for a minumum of 3-4 hours per day.
+
+------
+
+### Total activity hours vs sleephours
+```{r}
+# sum plot - total_activity_hours vs total_sleep_hours (total hours of device usage per day)
+
+activity <- daily_activity %>% 
+  mutate(sum_active_minutes = (very_active_minutes + fairly_active_minutes + lightly_active_minutes)) %>% 
+  group_by(activity_day) %>% 
+  summarize(total_activity_hours = sum(sum_active_minutes/60))
+           
+
+sleep <- sleep_activity %>% 
+  group_by(sleep_day) %>% 
+  summarize(total_sleep_hours = sum(total_minutes_asleep/60))
+
+activity_sleep <- merge(activity, sleep, by.x = "activity_day", by.y= "sleep_day") %>% 
+  pivot_longer(!activity_day, names_to = "activity_type", values_to = "total_hours")
+
+activity_sleep %>% 
+  ggplot() + geom_line(mapping = aes(x = activity_day, y = total_hours, color = activity_type)) +
+  labs(title = "Total hours of device usage per day")
+```
+
+
+> From the plot the total usage of the smart device to track sleep and activity drops towards the end of the 30 day period and there are a few dips noticed on April 18, 25 etc as well which may be due to a particular day of the week that people are less likely to use the device. 
+
+------
+
+### Number of active users vs sedentary users vs sleep users
+```{r}
+
+# count plot - total_active_users vs total_sedentary_users vs total_sleep_users
+# (Number of users tracking their activity, inactivity and sleep)
+
+
+active_users <- daily_activity %>% 
+  mutate(sum_active_minutes = (very_active_minutes + fairly_active_minutes + lightly_active_minutes)) %>% 
+  filter(sum_active_minutes > 0) %>% 
+  select(id, activity_day, sum_active_minutes) %>% 
+  group_by(activity_day) %>% 
+  summarize(total_active_users = n())
+
+activity <- daily_activity %>% 
+  filter(sedentary_minutes > 0) %>% 
+  group_by(activity_day) %>% 
+  summarize(total_sedentary_users = n())
+
+sleep <- sleep_activity %>% 
+  group_by(sleep_day) %>% 
+  summarize(total_sleep_users = n())
+
+activity_sleep <- merge(activity, sleep, by.x = "activity_day", by.y= "sleep_day") %>% 
+  merge(active_users, by = "activity_day") %>% 
+  pivot_longer(!activity_day, names_to = "activity_type", values_to = "num_users")
+
+activity_sleep %>% 
+  ggplot() + geom_line(mapping = aes(x = activity_day, y = num_users, color = activity_type)) +
+  labs(title = "Number of users tracking their activity, inactivity and sleep")
+```
+
+
+> From the plot the users are showing more insterest to tract their activity than their sleep.
+
+------
+
+### Steps vs Calories
+```{r}
+# steps vs calories 
+
+daily_activity %>% 
+  ggplot() + geom_point(mapping = aes(x = total_steps, y = calories)) + 
+  geom_smooth(mapping = aes(x = total_steps, y = calories)) + labs(title = "Steps vs Calories")
+```
+
+
+> From the graph, we see more calories are burning with more steps
+
+------
+
+### Total time asleep vs time in bed
+```{r}
+# total_time_asleep vs total_time_in_bed
+
+sleep_activity %>% 
+  ggplot() + geom_point(mapping = aes(x = total_minutes_asleep, y = total_time_in_bed)) + 
+  geom_smooth(mapping = aes(x = total_minutes_asleep, y = total_time_in_bed)) + 
+  labs(title = "Total time asleep vs time in bed")
+```
+
+
+
+> The plot shows that most of the users are able to fall asleep quickly or getup from bed quickly after wakeup but there are a few users who spend more time awake in bed. 
+
+------
+
+### Time in bed without sleeping vs total active hours
+```{r}
+# time in bed without sleeping vs total active hours
+
+daily_activity %>% 
+  mutate(sum_active_hours = (very_active_minutes + fairly_active_minutes + lightly_active_minutes)/60) %>% 
+  select(id, activity_day, sum_active_hours) %>% 
+  merge(sleep_activity, by.x = "activity_day", by.y= "sleep_day") %>% 
+  mutate(time_wo_sleep = total_time_in_bed - total_minutes_asleep) %>% 
+  ggplot() + geom_point(mapping = aes(x = time_wo_sleep, y = sum_active_hours)) +
+  geom_smooth(mapping = aes(x = time_wo_sleep, y = sum_active_hours)) + 
+  labs(title = "Time awake in bed vs Active hours")
+```
+
+> The above plot doen't shows much correlation between being active and staying awake in bed.
+
+------
+
+## Act
+
+* Most of the users are getting 6-8 hours of sleep, but according to NIH and CDC, the recommended sleep is between 7-9 hours a day. So, Bellabeat can focus on promoting sleep through sleep schedules and reminders in the app.
+* The total usage of the smart device to track sleep and activity drops towards the end of the 30 day period. So Bellabeat can run promotional campaigns or programs frequently to keep the users engaged. It can try increasing the promotion period to 90-days so that users can observe results in their overall health and health conscious users may continue using the products.  
+* The users are showing more interest to track their activity than their sleep. So, Bellabeat can invest more on activity tracking related products.
+* More calories are burning with more steps. So, Bellabeat can introduce features like setting goals to burn calories and recommend corresponding steps and also introduce fun activities to keep the users engaged.
+* The users are able to fall asleep quickly or getup from bed quickly after wake up but there are a few users who spend more time awake in bed. So, Bellabeat can enable notifications related to sleep such as recommending sleep music, breathing exercises to fall asleep etc..
+
+
+
+
